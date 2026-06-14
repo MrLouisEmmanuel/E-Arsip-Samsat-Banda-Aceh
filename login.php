@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link rel="shortcut icon" type="image/x-icon" href="assets/img/logo/logo6.png">
     <link rel="stylesheet" href="assets/css/modern-style.css">
 </head>
-<body>
+<body class="page-auth">
 
     <div class="auth-container">
         <div class="auth-card glass-panel">
