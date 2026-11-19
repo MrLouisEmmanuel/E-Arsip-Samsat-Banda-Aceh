@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'koneksi.php';
+require_once 'portal.php';
 
 // Jika sudah login, arahkan ke dashboard
 if(isset($_SESSION['status']) && $_SESSION['status'] == 'login') {
@@ -48,20 +49,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pendaftaran - E-Arsip Samsat</title>
-    <!-- Favicon -->
-    <link rel="shortcut icon" type="image/x-icon" href="assets/img/logo/logo6.png">
-    <link rel="stylesheet" href="assets/css/modern-style.css">
+    <?php head_assets(); ?>
+    <title>Pendaftaran | E-Arsip</title>
 </head>
 <body class="page-auth">
 
     <div class="auth-container">
-        <div class="auth-card glass-panel" style="max-width: 450px;">
+        <div class="auth-card" >
             <div class="auth-header">
+                <?= brand() ?>
                 <h2>Pendaftaran Akun</h2>
-                <p>Mendaftar sebagai Wajib Pajak (User)</p>
+                <p>Buat akun wajib pajak untuk mengakses dokumen Anda.</p>
             </div>
 
             <?php if($error): ?>
@@ -78,22 +76,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <form action="register.php" method="POST">
                 <div class="form-group">
                     <label for="nama">Nama Lengkap</label>
-                    <input type="text" id="nama" name="nama" class="form-control" required autocomplete="off" value="<?= isset($_POST['nama']) ? htmlspecialchars($_POST['nama']) : '' ?>">
+                    <input type="text" id="nama" name="nama" class="form-control" required maxlength="255" autocomplete="name" value="<?= isset($_POST['nama']) ? htmlspecialchars($_POST['nama']) : '' ?>">
                 </div>
 
                 <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" class="form-control" required autocomplete="off" value="<?= isset($_POST['username']) ? htmlspecialchars($_POST['username']) : '' ?>">
+                    <label for="username">Nama pengguna</label>
+                    <input type="text" id="username" maxlength="255" name="username" class="form-control" required autocomplete="username" value="<?= isset($_POST['username']) ? htmlspecialchars($_POST['username']) : '' ?>">
                 </div>
                 
                 <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" class="form-control" required>
+                    <label for="password">Kata sandi</label>
+                    <input autocomplete="new-password" type="password" id="password" name="password" class="form-control" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="confirm_password">Konfirmasi Password</label>
-                    <input type="password" id="confirm_password" name="confirm_password" class="form-control" required>
+                    <label for="confirm_password">Konfirmasi kata sandi</label>
+                    <input autocomplete="new-password" type="password" id="confirm_password" name="confirm_password" class="form-control" required>
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100 mt-4">Daftar Akun Baru</button>
@@ -107,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <?php endif; ?>
             
             <div class="text-center mt-4">
-                <a href="index.php" style="color: var(--text-light); text-decoration: none; font-size: 0.9rem;">&larr; Kembali ke Beranda</a>
+                <a href="index.php" style="color: var(--text-light); text-decoration: none; font-size: 0.9rem;">Kembali ke beranda</a>
             </div>
         </div>
     </div>
