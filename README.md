@@ -30,6 +30,12 @@ Sistem Manajemen Arsip Digital Kendaraan Bermotor untuk Kantor Bersama SAMSAT Ko
 
 ---
 
+## Contoh arsip pembayaran pajak
+
+Masuk, buka **Data arsip**, lalu cari `DEMO-PKB` untuk melihat lembar penerimaan berkas, ringkasan data STNK, dan rekap pembayaran pajak. Ketiganya merupakan PDF satu halaman dengan data fiktif yang tersedia bagi akun terdaftar. Instalasi baru memuat contoh ini dari `arsip_kita.sql`.
+
+Lambang lalu lintas berasal dari aset awal proyek. Logo Pancacita dan Jasa Raharja disimpan lokal dari publikasi instansi. [Pemerintah Aceh](https://bpba.acehprov.go.id/media/2022.09/logo_pancacita1.png) dan [Jasa Raharja](https://jasaraharja.co.id/id).
+
 ## 🔒 Keamanan
 
 - **Password Hashing** — Bcrypt (`password_hash()` / `password_verify()`) dengan auto-migrasi dari MD5 lama
@@ -46,9 +52,9 @@ Sistem Manajemen Arsip Digital Kendaraan Bermotor untuk Kantor Bersama SAMSAT Ko
 | Backend | PHP 8.x |
 | Database | MySQL 8.x / MariaDB |
 | Frontend | HTML5, Vanilla CSS, JavaScript |
-| Ikon | Font Awesome 6 |
-| Tipografi | Google Fonts (Inter) |
-| Alert | SweetAlert2 |
+| Ikon | Font Awesome lokal |
+| Tipografi | Sans-serif sistem dengan palet navy dan emas |
+| Umpan balik | Pesan formulir dan notifikasi sesi |
 | Web Server | Apache (Laragon / XAMPP / LAMP) |
 
 ---
@@ -115,7 +121,7 @@ Project-E-Arsip-SamsatBandaAceh/
      ```bash
      mysql -u root arsip_kita < arsip_kita.sql
      ```
-   - **Via Browser:** Buka `http://localhost/Project-E-Arsip-SamsatBandaAceh/setup.php`
+   - **Via PHP CLI untuk database kosong:** jalankan `php setup.php`. Untuk instalasi yang sudah memakai tabel `users` terpadu, jalankan `php alter_db.php` sekali. Migrasi menambahkan kolom penerima dan aksi riwayat tanpa menghapus data.
 
 4. **Konfigurasi koneksi** database di file `koneksi.php` (jika diperlukan):
    ```php
@@ -136,7 +142,7 @@ Project-E-Arsip-SamsatBandaAceh/
 
 | Role | Username | Password |
 |------|----------|----------|
-| Admin | `admin` | `admin` |
+| Admin | `admin` | `admin123` |
 | Petugas | `petugas1` | `petugas1` |
 | User | *(Daftar melalui halaman Register)* | — |
 
@@ -150,17 +156,17 @@ Project-E-Arsip-SamsatBandaAceh/
 - Melihat seluruh data arsip
 - Mengelola semua pengguna (CRUD)
 - Mengelola kategori arsip
-- Mengubah status tracking dokumen
+- Mengubah status, metadata, dan penerima dokumen
 - Melihat seluruh riwayat aktivitas sistem
 
 ### Petugas
 - Upload & scan dokumen baru
 - Mengelola kategori arsip
-- Mengubah status tracking dokumen
+- Mengubah status, metadata, dan penerima dokumen
 - Melihat riwayat aktivitas user & petugas
 
 ### User (Wajib Pajak)
-- Melihat data arsip yang tersedia
+- Mencari dan melihat pratinjau arsip bersama serta arsip yang ditujukan ke akun sendiri. Arsip lama tanpa penerima tetap tersedia sebagai arsip bersama.
 - Mengunduh dokumen
 - Melihat riwayat download pribadi
 - Mengelola profil sendiri
