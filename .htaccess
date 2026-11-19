@@ -1,0 +1,16 @@
+# Bookmarks from the former role-specific interfaces use the unified portal.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} ^(/(?:[^/]+/)*)(?:admin|petugas|user)/[^/]*$
+    RewriteRule ^(?:admin|petugas|user)/ - [E=ARCHIVE_BASE:%1]
+    RewriteRule ^user/arsip_download\.php$ %{ENV:ARCHIVE_BASE}download.php [R=303,L]
+    RewriteRule ^(?:admin|petugas|user)/arsip_preview\.php$ %{ENV:ARCHIVE_BASE}dashboard.php?page=detail [R=303,QSA,L]
+    RewriteRule ^petugas/arsip_tambah\.php$ %{ENV:ARCHIVE_BASE}dashboard.php?page=upload [R=303,L]
+    RewriteRule ^(?:admin|petugas|user)/arsip(?:_[a-z]+)?\.php$ %{ENV:ARCHIVE_BASE}dashboard.php?page=arsip [R=303,L]
+    RewriteRule ^(?:admin|petugas|user)/(?:profil|gantipassword)(?:_act)?\.php$ %{ENV:ARCHIVE_BASE}dashboard.php?page=profil [R=303,L]
+    RewriteRule ^(?:admin|petugas)/kategori(?:_[a-z]+)?\.php$ %{ENV:ARCHIVE_BASE}dashboard.php?page=kategori [R=303,L]
+    RewriteRule ^admin/(?:petugas|user)(?:_[a-z]+)?\.php$ %{ENV:ARCHIVE_BASE}dashboard.php?page=users [R=303,L]
+    RewriteRule ^(?:admin|petugas|user)/riwayat\.php$ %{ENV:ARCHIVE_BASE}dashboard.php?page=riwayat [R=303,L]
+    RewriteRule ^(?:admin|petugas|user)/logout\.php$ %{ENV:ARCHIVE_BASE}logout.php [R=303,L]
+    RewriteRule ^(?:admin|petugas|user)/(?:[^/]+\.php)?$ %{ENV:ARCHIVE_BASE}dashboard.php [R=303,QSD,L]
+</IfModule>
