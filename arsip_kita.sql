@@ -82,6 +82,7 @@ CREATE TABLE `arsip` (
   `arsip_id` int(11) NOT NULL AUTO_INCREMENT,
   `arsip_waktu_upload` datetime NOT NULL,
   `arsip_petugas` int(11) NOT NULL,
+  `arsip_penerima` int(11) DEFAULT NULL,
   `arsip_kode` varchar(255) NOT NULL,
   `arsip_nama` varchar(255) NOT NULL,
   `arsip_jenis` varchar(255) NOT NULL,
@@ -92,6 +93,7 @@ CREATE TABLE `arsip` (
   PRIMARY KEY (`arsip_id`),
   KEY `arsip_petugas` (`arsip_petugas`),
   KEY `arsip_kategori` (`arsip_kategori`),
+  CONSTRAINT `fk_arsip_penerima` FOREIGN KEY (`arsip_penerima`) REFERENCES `users` (`user_id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_arsip_petugas` FOREIGN KEY (`arsip_petugas`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_arsip_kategori` FOREIGN KEY (`arsip_kategori`) REFERENCES `kategori` (`kategori_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -122,6 +124,7 @@ CREATE TABLE `riwayat` (
   `riwayat_waktu` datetime NOT NULL,
   `riwayat_user` int(11) NOT NULL,
   `riwayat_arsip` int(11) NOT NULL,
+  `riwayat_aksi` varchar(100) NOT NULL DEFAULT 'Upload/Edit',
   PRIMARY KEY (`riwayat_id`),
   KEY `riwayat_user` (`riwayat_user`),
   KEY `riwayat_arsip` (`riwayat_arsip`),
@@ -133,17 +136,39 @@ CREATE TABLE `riwayat` (
 -- Dumping data untuk tabel `riwayat`
 --
 
-INSERT INTO `riwayat` (`riwayat_id`, `riwayat_waktu`, `riwayat_user`, `riwayat_arsip`) VALUES
-(1, '2019-10-11 15:32:29', 5, 3),
-(2, '2019-10-12 17:09:31', 5, 10),
-(3, '2019-10-12 17:09:45', 5, 9),
-(4, '2019-10-12 17:09:50', 5, 8),
-(5, '2019-10-12 17:09:53', 5, 3),
-(6, '2019-10-12 17:10:07', 6, 10),
-(7, '2019-10-12 17:10:16', 6, 9),
-(8, '2019-10-12 17:10:19', 6, 8),
-(9, '2019-10-12 17:10:22', 6, 6),
-(10, '2019-10-12 17:10:26', 6, 2);
+INSERT INTO `riwayat` (`riwayat_id`, `riwayat_waktu`, `riwayat_user`, `riwayat_arsip`, `riwayat_aksi`) VALUES
+(1, '2019-10-11 15:32:29', 5, 3, 'Download'),
+(2, '2019-10-12 17:09:31', 5, 10, 'Download'),
+(3, '2019-10-12 17:09:45', 5, 9, 'Download'),
+(4, '2019-10-12 17:09:50', 5, 8, 'Download'),
+(5, '2019-10-12 17:09:53', 5, 3, 'Download'),
+(6, '2019-10-12 17:10:07', 6, 10, 'Download'),
+(7, '2019-10-12 17:10:16', 6, 9, 'Download'),
+(8, '2019-10-12 17:10:19', 6, 8, 'Download'),
+(9, '2019-10-12 17:10:22', 6, 6, 'Download'),
+(10, '2019-10-12 17:10:26', 6, 2, 'Download');
+
+-- Contoh berkas fiktif untuk katalog E-Arsip.
+SET @petugas_contoh = (SELECT MIN(user_id) FROM users WHERE user_role = 'petugas');
+INSERT INTO kategori (kategori_nama, kategori_keterangan)
+SELECT 'Contoh pembayaran pajak kendaraan', 'Bundel latihan menggunakan identitas dan nominal fiktif.'
+WHERE @petugas_contoh IS NOT NULL AND NOT EXISTS (SELECT 1 FROM kategori WHERE kategori_nama = 'Contoh pembayaran pajak kendaraan');
+SET @kategori_contoh = (SELECT MIN(kategori_id) FROM kategori WHERE kategori_nama = 'Contoh pembayaran pajak kendaraan');
+
+INSERT INTO arsip (arsip_waktu_upload, arsip_petugas, arsip_kode, arsip_nama, arsip_jenis, arsip_kategori, arsip_keterangan, arsip_file, arsip_status)
+SELECT NOW(), @petugas_contoh, 'DEMO-PKB-001', 'Lembar penerimaan berkas (Contoh)', 'pdf', @kategori_contoh,
+       'Ketiga lampiran pada kasus latihan ini tercatat dalam satu bundel. Data fiktif untuk demonstrasi E-Arsip.', 'contoh-pkb-lembar-penerimaan.pdf', 'Arsip Tersimpan'
+WHERE @petugas_contoh IS NOT NULL AND NOT EXISTS (SELECT 1 FROM arsip WHERE arsip_kode = 'DEMO-PKB-001');
+
+INSERT INTO arsip (arsip_waktu_upload, arsip_petugas, arsip_kode, arsip_nama, arsip_jenis, arsip_kategori, arsip_keterangan, arsip_file, arsip_status)
+SELECT NOW(), @petugas_contoh, 'DEMO-PKB-002', 'Ringkasan data STNK (Contoh)', 'pdf', @kategori_contoh,
+       'Petugas mencocokkan referensi kendaraan dengan lembar penerimaan. Data fiktif untuk demonstrasi E-Arsip.', 'contoh-pkb-ringkasan-stnk.pdf', 'Arsip Tersimpan'
+WHERE @petugas_contoh IS NOT NULL AND NOT EXISTS (SELECT 1 FROM arsip WHERE arsip_kode = 'DEMO-PKB-002');
+
+INSERT INTO arsip (arsip_waktu_upload, arsip_petugas, arsip_kode, arsip_nama, arsip_jenis, arsip_kategori, arsip_keterangan, arsip_file, arsip_status)
+SELECT NOW(), @petugas_contoh, 'DEMO-PKB-003', 'Rekap pembayaran pajak (Contoh)', 'pdf', @kategori_contoh,
+       'Nominal dibuat untuk latihan pencatatan. Referensi transaksi PAY-DEMO-001. Data fiktif untuk demonstrasi E-Arsip.', 'contoh-pkb-rekap-pembayaran.pdf', 'Arsip Tersimpan'
+WHERE @petugas_contoh IS NOT NULL AND NOT EXISTS (SELECT 1 FROM arsip WHERE arsip_kode = 'DEMO-PKB-003');
 
 COMMIT;
 

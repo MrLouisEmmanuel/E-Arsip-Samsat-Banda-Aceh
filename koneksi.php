@@ -1,6 +1,6 @@
 <?php
 $host = 'localhost';
-$dbname = 'arsip_kita';
+$dbname = getenv('EARSIP_DB_NAME') ?: 'arsip_kita';
 $username = 'root';
 $password = '';
 
