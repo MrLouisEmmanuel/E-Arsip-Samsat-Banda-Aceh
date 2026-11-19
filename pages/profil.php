@@ -1,118 +1,42 @@
 <?php
-// pages/profil.php
-if (!isset($_SESSION['status'])) exit();
-
+if (!isset($role)) exit;
 $id = $_SESSION['id'];
-
-// Proses Update Profil
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'update_profil') {
-    $nama = trim($_POST['nama']);
-    $username = trim($_POST['username']);
-    $password = $_POST['password'];
-
-    // Handle File Upload (Foto Profil)
-    $foto_query = "";
-    $params = [$nama, $username];
-    
-    if (isset($_FILES['foto']) && $_FILES['foto']['error'] == 0) {
-        $filetmp = $_FILES['foto']['tmp_name'];
-        $filename = $_FILES['foto']['name'];
-        $fileext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        if (in_array($fileext, ['jpg','jpeg','png'])) {
-            $newfoto = time() . "_profil." . $fileext;
-            // Gunakan path gambar/ default sistem lama atau assets/img/
-            // Kita simpan di folder 'gambar/' agar kompatibel
-            if(!is_dir('gambar')) mkdir('gambar');
-            move_uploaded_file($filetmp, "gambar/" . $newfoto);
-            
-            $foto_query = ", user_foto=?";
-            $params[] = $newfoto;
-            
-            // Hapus foto lama jika ada
-            $stmt = $pdo->prepare("SELECT user_foto FROM users WHERE user_id = ?");
-            $stmt->execute([$id]);
-            $old_foto = $stmt->fetchColumn();
-            if ($old_foto && file_exists("gambar/".$old_foto)) {
-                @unlink("gambar/".$old_foto);
-            }
+$u = query_rows($pdo,'SELECT * FROM users WHERE user_id=?',[$id])[0];
+if ($_SERVER['REQUEST_METHOD']==='POST') {
+    $name = trim($_POST['nama'] ?? '');
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $photo = $_FILES['foto'] ?? ['error'=>UPLOAD_ERR_NO_FILE];
+    $newFile = null;
+    if ($name==='' || $username==='') $error = 'Isi nama dan nama pengguna.';
+    elseif (query_rows($pdo,'SELECT user_id FROM users WHERE user_username=? AND user_id<>?',[$username,$id])) $error='Nama pengguna sudah dipakai.';
+    elseif ($photo['error']!==UPLOAD_ERR_NO_FILE) {
+        $mime = $photo['error']===UPLOAD_ERR_OK ? (new finfo(FILEINFO_MIME_TYPE))->file($photo['tmp_name']) : '';
+        $ext = ['image/png'=>'png','image/jpeg'=>'jpg'][$mime] ?? null;
+        if (!$ext || $photo['size']>2097152) $error='Gunakan foto PNG atau JPG hingga 2 MB.';
+        else {
+            $newFile = bin2hex(random_bytes(16)).'.'.$ext;
+            if (!move_uploaded_file($photo['tmp_name'],'gambar/'.$newFile)) $error='Foto belum dapat disimpan.';
         }
     }
-
-    if (!empty($password)) {
-        $hashed = password_hash($password, PASSWORD_DEFAULT);
-        $foto_query .= ", user_password=?";
-        $params[] = $hashed;
-    }
-
-    $params[] = $id;
-
-    $stmt = $pdo->prepare("UPDATE users SET user_nama=?, user_username=? {$foto_query} WHERE user_id=?");
-    if ($stmt->execute($params)) {
-        // Update session
-        $_SESSION['nama'] = $nama;
-        $_SESSION['username'] = $username;
-        echo "<script>showAlert('Berhasil!', 'Profil Anda telah diperbarui.', 'success').then(() => { window.location='?page=profil'; });</script>";
-    } else {
-        echo "<script>showAlert('Gagal!', 'Terjadi kesalahan sistem.', 'error');</script>";
+    if (!isset($error)) {
+        try {
+            $pdo->prepare('UPDATE users SET user_nama=?,user_username=?,user_password=?,user_foto=? WHERE user_id=?')
+                ->execute([$name,$username,$password!==''?password_hash($password,PASSWORD_DEFAULT):$u['user_password'],$newFile ?? $u['user_foto'],$id]);
+        } catch (PDOException $e) { if ($newFile) unlink('gambar/'.$newFile); throw $e; }
+        if ($newFile && preg_match('/^[0-9a-f]{32}\.(jpg|png)$/D',$u['user_foto'] ?? '') && is_file('gambar/'.$u['user_foto'])) unlink('gambar/'.$u['user_foto']);
+        $_SESSION['nama']=$name;
+        $_SESSION['username']=$username;
+        notice('Profil diperbarui.','profil');
     }
 }
-
-// Ambil Data Profil Terbaru
-$stmt = $pdo->prepare("SELECT * FROM users WHERE user_id = ?");
-$stmt->execute([$id]);
-$user = $stmt->fetch();
-$foto_profil = !empty($user['user_foto']) ? "gambar/".$user['user_foto'] : "https://ui-avatars.com/api/?name=".urlencode($user['user_nama'])."&background=0D8ABC&color=fff&size=150";
+$photoName = basename($u['user_foto'] ?? '');
+$photoPath = 'gambar/'.$photoName;
+if (!is_file($photoPath)) $photoPath = 'gambar/'.$role.'/'.$photoName;
 ?>
-
-<div style="max-width: 800px; margin: 0 auto;">
-    
-    <!-- Header Profil (Modern Banner) -->
-    <div style="position: relative; height: 150px; background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); border-radius: 12px 12px 0 0;">
-        <div style="position: absolute; bottom: -50px; left: 30px;">
-            <img src="<?= htmlspecialchars($foto_profil) ?>" alt="Foto Profil" style="width: 100px; height: 100px; border-radius: 50%; border: 4px solid white; object-fit: cover; background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        </div>
-    </div>
-    
-    <!-- Konten Profil -->
-    <div class="glass-panel" style="border-radius: 0 0 12px 12px; padding: 60px 30px 30px 30px; border-top: none;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
-            <div>
-                <h2 style="color: var(--text-color); margin-bottom: 5px;"><?= htmlspecialchars($user['user_nama']) ?></h2>
-                <p style="color: var(--text-light); margin-bottom: 15px;">@<?= htmlspecialchars($user['user_username']) ?></p>
-                <span style="background: var(--accent-color); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">
-                    <?= htmlspecialchars($user['user_role']) ?>
-                </span>
-            </div>
-            
-            <div style="margin-top: 20px; width: 100%; max-width: 400px;">
-                <h4 style="margin-bottom: 20px; color: var(--primary-color); border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">Edit Informasi Profil</h4>
-                
-                <form method="POST" enctype="multipart/form-data">
-                    <input type="hidden" name="action" value="update_profil">
-                    
-                    <div class="form-group">
-                        <label>Foto Profil <small>(Opsional, JPG/PNG)</small></label>
-                        <input type="file" name="foto" accept="image/png, image/jpeg" class="form-control" style="padding: 10px;">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Nama Lengkap</label>
-                        <input type="text" name="nama" class="form-control" required value="<?= htmlspecialchars($user['user_nama']) ?>">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Username</label>
-                        <input type="text" name="username" class="form-control" required value="<?= htmlspecialchars($user['user_username']) ?>">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Password Baru <small style="color: red;">(Kosongkan jika tidak ingin ganti password)</small></label>
-                        <input type="password" name="password" class="form-control" placeholder="••••••••">
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100" style="margin-top: 10px;"><i class="fas fa-user-edit"></i> Simpan Perubahan Profil</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+<form class="panel editor" method="post" enctype="multipart/form-data"><?= csrf_field() ?><div class="profile-heading"><?php if ($photoName && is_file($photoPath)): ?><img class="profile-photo" src="<?= h($photoPath) ?>" alt="Foto profil"><?php else: ?><span class="avatar"><?= h(mb_substr($u['user_nama'],0,1)) ?></span><?php endif; ?><div><h2><?= h($u['user_nama']) ?></h2><small>@<?= h($u['user_username']) ?></small></div></div>
+<?php if (isset($error)): ?><p class="alert alert-danger"><?= h($error) ?></p><?php endif; ?>
+<label>Foto profil <small>(JPG atau PNG hingga 2 MB)</small><input type="file" name="foto" accept="image/jpeg,image/png"></label>
+<div class="fields"><label>Nama lengkap<input required maxlength="255" name="nama" value="<?= h($name ?? $u['user_nama']) ?>"></label><label>Nama pengguna<input required maxlength="255" name="username" value="<?= h($username ?? $u['user_username']) ?>"></label></div>
+<label>Kata sandi baru <small>(isi untuk mengganti)</small><input type="password" name="password" autocomplete="new-password"></label>
+<button class="btn primary">Simpan perubahan</button></form>

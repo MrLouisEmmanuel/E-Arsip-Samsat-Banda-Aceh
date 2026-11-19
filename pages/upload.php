@@ -1,102 +1,54 @@
 <?php
-// pages/upload.php
-if (!isset($_SESSION['status']) || $_SESSION['role'] != 'petugas') exit();
-
-// Fetch Categories for Dropdown
-$stmt = $pdo->query("SELECT * FROM kategori");
-$kategoris = $stmt->fetchAll();
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_FILES['file_upload']) || isset($_FILES['file_scan']))) {
-    $kode = "MN-" . time();
-    $nama = $_POST['nama'];
-    $kategori = $_POST['kategori'];
-    $keterangan = $_POST['keterangan'];
-    $petugas = $_SESSION['id'];
-    $waktu = date('Y-m-d H:i:s');
-    
-    // Tentukan file mana yang dipakai (scan atau upload biasa)
-    $fileInput = !empty($_FILES['file_upload']['name']) ? $_FILES['file_upload'] : $_FILES['file_scan'];
-    
-    if(!empty($fileInput['name'])) {
-        $filename = $fileInput['name'];
-        $filetmp = $fileInput['tmp_name'];
-        $fileext = pathinfo($filename, PATHINFO_EXTENSION);
-        $newfilename = time() . "_" . mt_rand(100,999) . "." . $fileext;
-        
-        // Validasi file (hanya gambar/pdf)
-        $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
-        if(in_array(strtolower($fileext), $allowed)) {
-            if(move_uploaded_file($filetmp, "arsip/" . $newfilename)) {
-                $stmt = $pdo->prepare("INSERT INTO arsip (arsip_waktu_upload, arsip_petugas, arsip_kode, arsip_nama, arsip_jenis, arsip_kategori, arsip_keterangan, arsip_file, arsip_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Diterima Petugas')");
-                $stmt->execute([$waktu, $petugas, $kode, $nama, $fileext, $kategori, $keterangan, $newfilename]);
-                
-                // Catat Riwayat
-                $arsip_id = $pdo->lastInsertId();
-                $stmt2 = $pdo->prepare("INSERT INTO riwayat (riwayat_waktu, riwayat_user, riwayat_arsip) VALUES (?, ?, ?)");
-                $stmt2->execute([$waktu, $petugas, $arsip_id]);
-                
-                echo "<script>showAlert('Berhasil!', 'Dokumen berhasil diunggah.', 'success').then(() => { window.location='?page=arsip'; });</script>";
-            } else {
-                echo "<script>showAlert('Gagal!', 'Gagal menyimpan file.', 'error');</script>";
-            }
-        } else {
-            echo "<script>showAlert('Gagal!', 'Format file tidak diizinkan. Gunakan JPG/PNG/PDF.', 'error');</script>";
-        }
+if (($role ?? '') !== 'petugas') exit;
+$categories = query_rows($pdo, 'SELECT kategori_id, kategori_nama FROM kategori ORDER BY kategori_nama');
+$recipients = query_rows($pdo, "SELECT user_id, user_nama, user_username FROM users WHERE user_role='user' ORDER BY user_nama");
+$name = trim($_POST['nama'] ?? '');
+$category = $_POST['kategori'] ?? '';
+$recipient = $_POST['penerima'] ?? '';
+$notes = trim($_POST['keterangan'] ?? '');
+$limit = upload_limit();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $file = $_FILES['file_upload'] ?? [];
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) $file = $_FILES['file_scan'] ?? [];
+    if ($name === '' || mb_strlen($name) > 255 || !in_array($category, array_column($categories,'kategori_id'))) {
+        $error = 'Isi judul dokumen dan pilih kategori yang tersedia.';
+    } elseif ($recipient !== 'shared' && !in_array($recipient, array_column($recipients,'user_id'))) {
+        $error = 'Pilih penerima atau akses bersama untuk dokumen ini.';
+    } elseif (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !$file['size'] || $file['size'] > $limit) {
+        $error = 'Pilih berkas sesuai batas ukuran yang tertera.';
     } else {
-        echo "<script>showAlert('Gagal!', 'Tidak ada file yang dipilih.', 'error');</script>";
+        $types = ['application/pdf'=>'pdf', 'image/jpeg'=>'jpg', 'image/png'=>'png'];
+        $ext = $types[(new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name'])] ?? null;
+        if (!$ext) { $error = 'Isi berkas harus berupa PDF, JPG, atau PNG.'; }
+        else {
+            $key = bin2hex(random_bytes(12));
+            $filename = $key . '.' . $ext;
+            $path = __DIR__ . '/../arsip/' . $filename;
+            if (!move_uploaded_file($file['tmp_name'], $path)) { $error = 'Berkas belum tersimpan. Silakan pilih kembali.'; }
+            else {
+                try {
+                    $pdo->beginTransaction();
+                    $pdo->prepare('INSERT INTO arsip (arsip_waktu_upload,arsip_petugas,arsip_kode,arsip_nama,arsip_jenis,arsip_kategori,arsip_keterangan,arsip_file,arsip_penerima) VALUES (NOW(),?,?,?,?,?,?,?,?)')
+                        ->execute([$_SESSION['id'],'MN-' . strtoupper(substr($key,0,10)),$name,$ext,$category,$notes,$filename,$recipient === 'shared' ? null : $recipient]);
+                    $id = (int)$pdo->lastInsertId();
+                    log_activity($pdo,$id,'Upload');
+                    $pdo->commit();
+                } catch (Throwable $e) {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    unlink($path);
+                    throw $e;
+                }
+                notice('Dokumen berhasil diunggah.', 'detail&id=' . $id);
+            }
+        }
     }
 }
 ?>
-
-<div class="auth-card glass-panel" style="max-width: 600px; margin: 0 auto; padding: 2rem;">
-    <h3 style="margin-bottom: 20px; color: var(--primary-color);"><i class="fas fa-file-upload"></i> Upload & Scan Dokumen</h3>
-    <p style="margin-bottom: 20px; color: var(--text-light); font-size: 0.9rem;">
-        Pilih salah satu metode: Upload file dari memori Anda, atau gunakan Scan (Kamera) untuk memfoto dokumen fisik langsung ke server.
-    </p>
-
-    <form method="POST" enctype="multipart/form-data">
-        <div class="form-group">
-            <label>Nama/Judul Dokumen</label>
-            <input type="text" name="nama" class="form-control" required placeholder="Contoh: STNK BA 1234 CD">
-        </div>
-        
-        <div class="form-group">
-            <label>Kategori</label>
-            <select name="kategori" class="form-control" required>
-                <option value="">Pilih Kategori...</option>
-                <?php foreach($kategoris as $k): ?>
-                    <option value="<?= $k['kategori_id'] ?>"><?= htmlspecialchars($k['kategori_nama']) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label>Keterangan Tambahan</label>
-            <textarea name="keterangan" class="form-control" rows="3" required placeholder="Detail dokumen..."></textarea>
-        </div>
-
-        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <!-- Tombol Upload Biasa -->
-            <div class="form-group" style="flex: 1; background: #f1f5f9; padding: 20px; border-radius: 8px; text-align: center; border: 2px dashed #cbd5e1;">
-                <label style="font-size: 1rem; cursor: pointer; display: block;">
-                    <i class="fas fa-folder-open" style="font-size: 2.5rem; color: #64748b; margin-bottom: 10px;"></i><br>
-                    Upload File Biasa
-                    <input type="file" name="file_upload" accept="image/*,application/pdf" style="display: none;" onchange="document.getElementById('file-name').innerText = this.files[0].name; document.getElementById('scan-input').value='';">
-                </label>
-            </div>
-
-            <!-- Tombol Scan Kamera -->
-            <div class="form-group" style="flex: 1; background: #f0fdfa; padding: 20px; border-radius: 8px; text-align: center; border: 2px dashed #a7f3d0;">
-                <label style="font-size: 1rem; cursor: pointer; display: block;">
-                    <i class="fas fa-camera" style="font-size: 2.5rem; color: var(--accent-color); margin-bottom: 10px;"></i><br>
-                    Scan Kamera HP
-                    <input type="file" id="scan-input" name="file_scan" accept="image/*,application/pdf" capture="environment" style="display: none;" onchange="document.getElementById('file-name').innerText = this.files[0].name; document.getElementsByName('file_upload')[0].value='';">
-                </label>
-            </div>
-        </div>
-        
-        <div id="file-name" style="margin-bottom: 15px; color: var(--success-color); font-weight: bold; text-align: center;"></div>
-
-        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save"></i> Simpan & Unggah Dokumen</button>
-    </form>
-</div>
+<form method="post" enctype="multipart/form-data" class="panel editor"><?= csrf_field() ?>
+<p class="intro">Lengkapi data arsip dan pilih siapa yang dapat melihat berkas ini.</p>
+<?php if (isset($error)): ?><p class="alert alert-danger" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php require __DIR__ . '/document-fields.php'; ?>
+<h3>Berkas dokumen</h3><p class="muted">PDF, JPG, atau PNG hingga <?= round($limit / 1048576, 1) ?> MB. Pilih satu sumber berkas.</p>
+<div class="fields file-options"><label><?= icon('folder-open-o') ?> Pilih file<input data-document type="file" name="file_upload" accept="application/pdf,image/jpeg,image/png"></label>
+<label><?= icon('camera') ?> Gunakan kamera<input data-document type="file" name="file_scan" accept="image/jpeg,image/png" capture="environment"></label></div>
+<p id="chosen-file" aria-live="polite"></p><button class="btn primary" type="submit"><?= icon('cloud-upload') ?> Simpan dokumen</button></form>

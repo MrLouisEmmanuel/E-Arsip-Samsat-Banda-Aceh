@@ -1,39 +1,10 @@
 <?php
-// pages/home.php
-if (!isset($_SESSION['status'])) exit();
-
-// Get counts
-$count_arsip = $pdo->query("SELECT COUNT(*) FROM arsip")->fetchColumn();
-$count_kategori = $pdo->query("SELECT COUNT(*) FROM kategori")->fetchColumn();
-$count_user = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
-$count_riwayat = $pdo->query("SELECT COUNT(*) FROM riwayat")->fetchColumn();
+if (!isset($role)) exit;
+[$scope,$params] = archive_access();
+$counts = query_rows($pdo,"SELECT COUNT(*) total, COUNT(CASE WHEN arsip_status='Sedang Diverifikasi' THEN 1 END) verifikasi, COUNT(CASE WHEN arsip_status='Arsip Tersimpan' THEN 1 END) tersimpan FROM arsip a WHERE $scope",$params)[0];
+$rows = query_rows($pdo,"SELECT a.*,k.kategori_nama FROM arsip a JOIN kategori k ON k.kategori_id=a.arsip_kategori WHERE $scope ORDER BY arsip_waktu_upload DESC, arsip_id DESC LIMIT 5",$params);
 ?>
-<div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 2rem;">
-    <div style="background: var(--bg-gradient); padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
-        <i class="fas fa-folder-open" style="font-size: 2.5rem; color: var(--accent-color); margin-bottom: 10px;"></i>
-        <h3><?= $count_arsip ?></h3>
-        <p style="color: var(--text-light);">Total Arsip</p>
-    </div>
-    <div style="background: var(--bg-gradient); padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
-        <i class="fas fa-tags" style="font-size: 2.5rem; color: var(--success-color); margin-bottom: 10px;"></i>
-        <h3><?= $count_kategori ?></h3>
-        <p style="color: var(--text-light);">Kategori</p>
-    </div>
-    <div style="background: var(--bg-gradient); padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
-        <i class="fas fa-users" style="font-size: 2.5rem; color: #f59e0b; margin-bottom: 10px;"></i>
-        <h3><?= $count_user ?></h3>
-        <p style="color: var(--text-light);">Pengguna Sistem</p>
-    </div>
-    <div style="background: var(--bg-gradient); padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
-        <i class="fas fa-history" style="font-size: 2.5rem; color: #8b5cf6; margin-bottom: 10px;"></i>
-        <h3><?= $count_riwayat ?></h3>
-        <p style="color: var(--text-light);">Riwayat Unduh</p>
-    </div>
-</div>
-
-<div class="welcome-box" style="padding: 20px; border-left: 4px solid var(--accent-color); background: #f0fdfa;">
-    <h3 style="color: var(--primary-color);">Sistem E-Arsip Digital</h3>
-    <p style="margin-top: 10px; line-height: 1.6;">
-        Sistem Manajemen Arsip Digital Samsat Banda Aceh. Gunakan menu di sidebar untuk melakukan aktivitas pengarsipan, pencarian dokumen, maupun pemantauan status proses (tracking).
-    </p>
-</div>
+<div class="welcome"><div><p class="eyebrow">SAMSAT BANDA ACEH</p><h2>Selamat datang, <?= h($_SESSION['nama']) ?>.</h2><p><?= $role==='petugas'?'Kumpulkan berkas dan pantau proses pengarsipan.':'Telusuri dokumen dan pantau status pengarsipan.' ?></p></div>
+<a class="btn light" href="?page=<?= $role==='petugas'?'upload':'arsip' ?>"><?= icon($role==='petugas'?'plus':'folder-open-o') ?> <?= $role==='petugas'?'Unggah dokumen':'Buka data arsip' ?></a></div>
+<div class="metrics"><?php foreach ([['Total dokumen','total','','archive'],['Sedang diverifikasi','verifikasi',ARCHIVE_STATUSES[1],'clock-o'],['Arsip tersimpan','tersimpan',ARCHIVE_STATUSES[3],'check-square-o']] as [$label,$key,$status,$symbol]): ?><a class="metric" href="?page=arsip&amp;status=<?= urlencode($status) ?>"><span><?= icon($symbol) ?> <?= $label ?></span><strong><?= $counts[$key] ?></strong></a><?php endforeach; ?></div>
+<section class="panel"><div class="list-head"><h2>Dokumen terbaru</h2><a href="?page=arsip">Lihat semua</a></div><?php require __DIR__.'/document-list.php'; ?></section>

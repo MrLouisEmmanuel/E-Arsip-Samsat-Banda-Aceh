@@ -1,0 +1,4 @@
+<?php if (!isset($rows)) exit; ?>
+<?php if (!$rows): ?><p class="empty"><?= icon('folder-open-o') ?> Belum ada dokumen yang sesuai.</p><?php else: ?>
+<div class="scroll"><table><thead><tr><th>Dokumen</th><th>Kategori</th><th>Status</th><th>Tanggal unggah</th></tr></thead><tbody>
+<?php foreach ($rows as $a): ?><tr><td><a class="doc-link" href="?page=detail&amp;id=<?= $a['arsip_id'] ?>"><?= icon('file-text-o') ?><span><?= h($a['arsip_nama']) ?><small><?= h($a['arsip_kode']) ?></small></span></a></td><td><?= h($a['kategori_nama']) ?></td><td><span class="pill s<?= (int)array_search($a['arsip_status'], ARCHIVE_STATUSES,true) ?>"><?= h($a['arsip_status']) ?></span></td><td><?= date('d/m/Y',strtotime($a['arsip_waktu_upload'])) ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>

@@ -1,143 +1,43 @@
 <?php
 session_start();
 require 'koneksi.php';
-
-// Cek status login
-if (!isset($_SESSION['status']) || $_SESSION['status'] != 'login') {
-    header("Location: login.php");
-    exit();
-}
-
+require_once 'portal.php';
+if (!current_account($pdo)) { header('Location: login.php'); exit; }
 $role = $_SESSION['role'];
-$page = isset($_GET['page']) ? $_GET['page'] : 'home';
-
-// Routing halaman
-function renderPage($page, $role, $pdo) {
-    // Basic Router
-    if ($page == 'home') {
-        include 'pages/home.php';
-    } elseif ($page == 'arsip' && in_array($role, ['admin', 'petugas', 'user'])) {
-        include 'pages/arsip.php';
-    } elseif ($page == 'upload' && $role == 'petugas') {
-        include 'pages/upload.php';
-    } elseif ($page == 'kategori' && in_array($role, ['admin', 'petugas'])) {
-        include 'pages/kategori.php';
-    } elseif ($page == 'users' && $role == 'admin') {
-        include 'pages/users.php';
-    } elseif ($page == 'riwayat') {
-        include 'pages/riwayat.php';
-    } elseif ($page == 'profil') {
-        include 'pages/profil.php';
-    } else {
-        echo "<div class='alert alert-danger'>Halaman tidak ditemukan atau Anda tidak memiliki akses.</div>";
+$menu = ['home'=>['Ringkasan','th-large'], 'arsip'=>['Data arsip','folder-open-o']];
+if ($role === 'petugas') $menu['upload'] = ['Unggah dokumen','cloud-upload'];
+if ($role !== 'user') $menu['kategori'] = ['Kategori arsip','tags'];
+if ($role === 'admin') $menu['users'] = ['Pengguna','users'];
+$menu += ['riwayat'=>['Riwayat aktivitas','history'], 'profil'=>['Profil saya','user-o']];
+$page = $_GET['page'] ?? 'home';
+if ($page === 'scan' && $role === 'petugas') { header('Location: ?page=upload'); exit; }
+$allowed = is_string($page) && (isset($menu[$page]) || $page === 'detail');
+$title = $allowed ? ($menu[$page][0] ?? 'Detail dokumen') : 'Halaman tidak tersedia';
+if (!$allowed) http_response_code(403);
+$flash = $_SESSION['notice'] ?? null;
+unset($_SESSION['notice']);
+ob_start();
+if (!$allowed) { echo '<p class="panel">Halaman ini tidak tersedia untuk akun Anda.</p>'; }
+elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_SESSION['csrf']) || !hash_equals($_SESSION['csrf'], (string)($_POST['csrf'] ?? '')))) {
+    http_response_code(400);
+    echo '<p class="alert alert-danger">Formulir kedaluwarsa atau berkas terlalu besar. Muat ulang halaman lalu coba kembali.</p>';
+} else {
+    try { require __DIR__ . '/pages/' . $page . '.php'; }
+    catch (PDOException $error) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log($error->getMessage());
+        $flash = ['error','Data belum dapat diproses. Periksa isian atau coba kembali.'];
     }
 }
+$content = ob_get_clean();
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - E-Arsip Samsat</title>
-    <!-- Favicon -->
-    <link rel="shortcut icon" type="image/x-icon" href="assets/img/logo/logo6.png">
-    <link rel="stylesheet" href="assets/css/modern-style.css">
-    <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-    </style>
-</head>
-<body>
-
-<div class="dashboard-layout">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <h3>E-Arsip Samsat</h3>
-            <span style="font-size: 0.8rem; opacity: 0.8;">Panel <?= ucfirst($role) ?></span>
-        </div>
-        <nav class="sidebar-nav">
-            <a href="?page=home" class="<?= $page == 'home' ? 'active' : '' ?>">
-                <i class="fas fa-home"></i> Dashboard
-            </a>
-            <a href="?page=arsip" class="<?= $page == 'arsip' ? 'active' : '' ?>">
-                <i class="fas fa-folder-open"></i> Data Arsip
-            </a>
-            
-            <?php if($role == 'petugas'): ?>
-            <a href="?page=upload" class="<?= $page == 'upload' ? 'active' : '' ?>">
-                <i class="fas fa-file-upload"></i> Upload Dokumen
-            </a>
-            <?php endif; ?>
-
-            <?php if($role == 'admin' || $role == 'petugas'): ?>
-            <a href="?page=kategori" class="<?= $page == 'kategori' ? 'active' : '' ?>">
-                <i class="fas fa-tags"></i> Kategori Arsip
-            </a>
-            <?php endif; ?>
-            
-            <?php if($role == 'admin'): ?>
-            <a href="?page=users" class="<?= $page == 'users' ? 'active' : '' ?>">
-                <i class="fas fa-users"></i> Manajemen User
-            </a>
-            <?php endif; ?>
-
-            <a href="?page=riwayat" class="<?= $page == 'riwayat' ? 'active' : '' ?>">
-                <i class="fas fa-history"></i> Riwayat
-            </a>
-            <a href="?page=profil" class="<?= $page == 'profil' ? 'active' : '' ?>">
-                <i class="fas fa-user"></i> Profil Saya
-            </a>
-            <a href="logout.php" style="margin-top: 2rem; color: #fca5a5;">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </a>
-        </nav>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="header-top">
-            <h2>Selamat Datang, <?= htmlspecialchars($_SESSION['nama']) ?></h2>
-            <div class="user-info">
-                <i class="fas fa-user-circle" style="font-size: 2rem; color: var(--primary-color);"></i>
-                <div>
-                    <strong><?= htmlspecialchars($_SESSION['nama']) ?></strong>
-                    <div style="font-size: 0.8rem; color: var(--text-light);"><?= ucfirst($role) ?></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="content-wrapper glass-panel" style="padding: 20px; background: white; border: 1px solid #e2e8f0; border-radius: var(--border-radius);">
-            <?php renderPage($page, $role, $pdo); ?>
-        </div>
-    </main>
-</div>
-
-<!-- SweetAlert2 for modern alerts -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    // General helper for sweet alerts
-    function showAlert(title, text, icon) {
-        Swal.fire({
-            title: title,
-            text: text,
-            icon: icon,
-            confirmButtonColor: '#3b82f6'
-        });
-    }
-</script>
-</body>
-</html>
+<!doctype html><html lang="id"><head><?php head_assets(); ?><title><?= h($title) ?> | E-Arsip</title></head>
+<body class="desk"><a class="skip" href="#utama">Ke konten utama</a>
+<aside class="side"><div class="side-brand"><?= brand() ?><button type="button" data-menu aria-expanded="false" aria-controls="side-nav" class="mobile-menu"><?= icon('bars') ?> Menu</button></div>
+<nav id="side-nav" aria-label="Ruang kerja"><p class="nav-label">RUANG KERJA</p>
+<?php foreach ($menu as $key=>[$label,$symbol]): $active = $page === $key || ($page === 'detail' && $key === 'arsip'); ?>
+<a href="?page=<?= $key ?>" <?= $active ? 'aria-current="page"' : '' ?>><?= icon($symbol) ?> <?= h($label) ?></a>
+<?php endforeach; ?><a class="signout" href="logout.php"><?= icon('sign-out') ?> Keluar</a></nav></aside>
+<main id="utama" class="workspace"><header class="desk-head"><div><p class="eyebrow">E-ARSIP &nbsp;/&nbsp; RUANG KERJA</p><h1><?= h($title) ?></h1></div><a class="account" href="?page=profil"><span class="avatar"><?= h(mb_substr($_SESSION['nama'],0,1)) ?></span><span><?= h($_SESSION['nama']) ?><small><?= $role === 'user' ? 'Wajib pajak' : ucfirst($role) ?></small></span></a></header>
+<?php if ($flash): ?><div role="status" class="alert <?= $flash[0] === 'error' ? 'alert-danger':'alert-success' ?>"><?= h($flash[1]) ?></div><?php endif; ?>
+<div class="page-content"><?= $content ?></div></main></body></html>
