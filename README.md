@@ -8,6 +8,15 @@ Sistem Manajemen Arsip Digital Kendaraan Bermotor untuk Kantor Bersama SAMSAT Ko
 
 ---
 
+## Panduan pengembangan
+
+Buka `http://localhost/Project-E-Arsip-SamsatBandaAceh/login`. Apache 2.4 memerlukan mod_rewrite dan izin membaca aturan Options, FileInfo serta Indexes dari .htaccess. Bookmark halaman lama diarahkan ke URL baru.
+
+- Ubah navigasi dan markup dashboard di `app/views/dashboard.php`. Identitas visual dan pemuatan aset bersama berada di `app/views/layout.php`. CSS dan JavaScript portal berada di `assets/css/modern-style.css` dan `assets/js/portal.js`.
+- Tambahkan halaman per fitur di `pages/`, lalu daftarkan hak aksesnya di `dashboard.php`. Pengaturan sesi berada di `app/session.php`, sedangkan fungsi akses arsip, kueri, dan CSRF berada di `app/portal.php`.
+- Atur koneksi melalui variabel lingkungan `EARSIP_DB_HOST`, `EARSIP_DB_NAME`, `EARSIP_DB_USER`, dan `EARSIP_DB_PASSWORD` pada proses Apache dan PHP CLI. Gunakan akun database khusus aplikasi pada server operasional.
+- Unduhan dan pratinjau melewati rute `download` untuk pemeriksaan hak akses. Direktori `arsip/` dan modul internal dibatasi oleh Apache.
+
 ## 📋 Deskripsi
 
 **E-Arsip Samsat** adalah aplikasi web berbasis PHP yang dirancang untuk memudahkan pengelolaan, pengarsipan, dan pelacakan dokumen kendaraan bermotor (STNK, BPKB, bukti pembayaran pajak, dll.) secara elektronik. Sistem ini menggantikan proses pengarsipan manual menjadi digital yang lebih cepat, aman, dan transparan.
@@ -160,13 +169,13 @@ Project-E-Arsip-SamsatBandaAceh/
 - Melihat seluruh riwayat aktivitas sistem
 
 ### Petugas
-- Upload & scan dokumen baru
+- Upload & scan dokumen baru dengan memilih satu akun wajib pajak sebagai penerima
 - Mengelola kategori arsip
 - Mengubah status, metadata, dan penerima dokumen
 - Melihat riwayat aktivitas user & petugas
 
 ### User (Wajib Pajak)
-- Mencari dan melihat pratinjau arsip bersama serta arsip yang ditujukan ke akun sendiri. Arsip lama tanpa penerima tetap tersedia sebagai arsip bersama.
+- Melihat ringkasan, mencari dokumen, dan membuka pratinjau arsip yang ditujukan ke akun sendiri. Arsip lama tanpa penerima hanya terlihat oleh admin dan petugas sampai penerima ditetapkan melalui detail dokumen.
 - Mengunduh dokumen
 - Melihat riwayat download pribadi
 - Mengelola profil sendiri
