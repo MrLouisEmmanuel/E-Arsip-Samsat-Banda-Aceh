@@ -12,8 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) $file = $_FILES['file_scan'] ?? [];
     if ($name === '' || mb_strlen($name) > 255 || !in_array($category, array_column($categories,'kategori_id'))) {
         $error = 'Isi judul dokumen dan pilih kategori yang tersedia.';
-    } elseif ($recipient !== 'shared' && !in_array($recipient, array_column($recipients,'user_id'))) {
-        $error = 'Pilih penerima atau akses bersama untuk dokumen ini.';
+    } elseif (!in_array($recipient, array_map('strval', array_column($recipients, 'user_id')), true)) {
+        $error = 'Pilih akun wajib pajak yang berhak menerima dokumen ini.';
     } elseif (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !$file['size'] || $file['size'] > $limit) {
         $error = 'Pilih berkas sesuai batas ukuran yang tertera.';
     } else {
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 try {
                     $pdo->beginTransaction();
                     $pdo->prepare('INSERT INTO arsip (arsip_waktu_upload,arsip_petugas,arsip_kode,arsip_nama,arsip_jenis,arsip_kategori,arsip_keterangan,arsip_file,arsip_penerima) VALUES (NOW(),?,?,?,?,?,?,?,?)')
-                        ->execute([$_SESSION['id'],'MN-' . strtoupper(substr($key,0,10)),$name,$ext,$category,$notes,$filename,$recipient === 'shared' ? null : $recipient]);
+                        ->execute([$_SESSION['id'],'MN-' . strtoupper(substr($key,0,10)),$name,$ext,$category,$notes,$filename,$recipient]);
                     $id = (int)$pdo->lastInsertId();
                     log_activity($pdo,$id,'Upload');
                     $pdo->commit();
