@@ -1,18 +1,24 @@
 <?php
-session_start();
+require_once __DIR__ . '/app/session.php';
 require 'koneksi.php';
-require_once 'portal.php';
+require_once __DIR__ . '/app/portal.php';
 
 // Jika sudah login, arahkan ke dashboard
 if(isset($_SESSION['status']) && $_SESSION['status'] == 'login') {
-    header("Location: dashboard.php");
+    header("Location: dashboard");
     exit();
 }
 
 $error = '';
 $success = '';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (
+    !isset($_SESSION['csrf']) || !is_string($_POST['csrf'] ?? null)
+    || !hash_equals($_SESSION['csrf'], $_POST['csrf'])
+)) {
+    http_response_code(400);
+    $error = 'Sesi formulir kedaluwarsa. Silakan coba kembali.';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nama = trim($_POST['nama']);
     $username = trim($_POST['username']);
     $password = $_POST['password'];
@@ -69,11 +75,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <?php if($success): ?>
                 <div class="alert alert-success">
                     <?= htmlspecialchars($success) ?><br><br>
-                    <a href="login.php" class="btn btn-primary w-100">Menuju Halaman Login</a>
+                    <a href="login" class="btn btn-primary w-100">Menuju Halaman Login</a>
                 </div>
             <?php else: ?>
 
-            <form action="register.php" method="POST">
+            <form action="register" method="POST">
+                <?= csrf_field() ?>
                 <div class="form-group">
                     <label for="nama">Nama Lengkap</label>
                     <input type="text" id="nama" name="nama" class="form-control" required maxlength="255" autocomplete="name" value="<?= isset($_POST['nama']) ? htmlspecialchars($_POST['nama']) : '' ?>">
@@ -99,13 +106,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             <div class="text-center mt-4">
                 <span style="color: var(--text-light); font-size: 0.9rem;">Sudah punya akun? </span>
-                <a href="login.php" style="color: var(--accent-color); text-decoration: none; font-size: 0.9rem; font-weight: bold;">Masuk di sini</a>
+                <a href="login" style="color: var(--accent-color); text-decoration: none; font-size: 0.9rem; font-weight: bold;">Masuk di sini</a>
             </div>
             
             <?php endif; ?>
             
             <div class="text-center mt-4">
-                <a href="index.php" style="color: var(--text-light); text-decoration: none; font-size: 0.9rem;">Kembali ke beranda</a>
+                <a href="./" style="color: var(--text-light); text-decoration: none; font-size: 0.9rem;">Kembali ke beranda</a>
             </div>
         </div>
     </div>

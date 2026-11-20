@@ -1,8 +1,8 @@
 <?php
-session_start();
+require_once __DIR__ . '/app/session.php';
 require 'koneksi.php';
-require_once 'portal.php';
-if (!current_account($pdo)) { header('Location: login.php'); exit; }
+require_once __DIR__ . '/app/portal.php';
+if (!current_account($pdo)) { header('Location: login'); exit; }
 [$scope,$params] = archive_access();
 $id = (int)($_GET['id'] ?? 0);
 $a = query_rows($pdo,"SELECT arsip_nama, arsip_file FROM arsip a WHERE arsip_id=? AND $scope",array_merge([$id],$params))[0] ?? null;

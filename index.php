@@ -1,8 +1,8 @@
-<?php require_once 'portal.php'; ?>
+<?php require_once __DIR__ . '/app/portal.php'; ?>
 <!doctype html><html lang="id"><head><?php head_assets(); ?><title>E-Arsip | Samsat Banda Aceh</title>
 <meta name="description" content="Portal arsip kendaraan bermotor Samsat Banda Aceh. Temukan dokumen, lihat status, dan unduh salinannya."></head>
 <body class="landing"><a class="skip" href="#utama">Ke konten utama</a>
-<header class="mast"><div class="wrap mast-inner"><?= brand() ?><nav aria-label="Menu utama"><a href="#layanan">Layanan</a><a href="#panduan">Panduan</a><a href="#lokasi">Lokasi</a><a class="btn primary" href="login.php"><?= icon('sign-in') ?> Masuk</a></nav></div></header>
+<header class="mast"><div class="wrap mast-inner"><?= brand() ?><nav aria-label="Menu utama"><a href="#layanan">Layanan</a><a href="#panduan">Panduan</a><a href="#lokasi">Lokasi</a><a class="btn primary" href="login"><?= icon('sign-in') ?> Masuk</a></nav></div></header>
 <main id="utama">
 <section class="hero-band">
     <div class="hero wrap">
@@ -11,8 +11,8 @@
             <h1>Arsip digital<br><em>kendaraan bermotor.</em></h1>
             <p class="lead">Temukan dokumen kendaraan Anda, pantau status pengarsipan, dan unduh salinannya dalam satu portal.</p>
             <div class="actions">
-                <a class="btn primary" href="login.php"><?= icon('folder-open-o') ?> Buka ruang arsip</a>
-                <a class="btn outline" href="register.php">Daftar akun</a>
+                <a class="btn primary" href="login"><?= icon('folder-open-o') ?> Buka ruang arsip</a>
+                <a class="btn outline" href="register">Daftar akun</a>
             </div>
         </div>
         <ul class="hero-agencies" aria-label="Instansi Samsat Banda Aceh">
@@ -40,7 +40,7 @@
 <section class="guide wrap" id="panduan"><div><p class="eyebrow"><span></span> PANDUAN</p><h2>Menggunakan E-Arsip</h2></div><div>
 <details open><summary>Bagaimana cara melihat dokumen?</summary><p>Masuk ke akun Anda, pilih Data arsip, lalu buka detail dokumen. Anda dapat melihat status, membaca pratinjau, atau mengunduh berkas.</p></details>
 <details><summary>Bagaimana petugas menambahkan berkas?</summary><p>Pilih Unggah dokumen, isi data berkas dan penerimanya, lalu pilih file atau gunakan kamera pada ponsel yang mendukung.</p></details>
-<details><summary>Bagaimana saya mendapatkan akun?</summary><p>Gunakan <a href="register.php">pendaftaran wajib pajak</a>. Administrator mengelola akun petugas melalui ruang kerja.</p></details>
+<details><summary>Bagaimana saya mendapatkan akun?</summary><p>Gunakan <a href="register">pendaftaran wajib pajak</a>. Administrator mengelola akun petugas melalui ruang kerja.</p></details>
 </div></section>
 <section class="location wrap" id="lokasi" aria-labelledby="location-title">
     <div class="location-info">

@@ -1,17 +1,23 @@
 <?php
-session_start();
+require_once __DIR__ . '/app/session.php';
 require 'koneksi.php';
-require_once 'portal.php';
+require_once __DIR__ . '/app/portal.php';
 
 // Jika sudah login, arahkan ke dashboard
 if(isset($_SESSION['status']) && $_SESSION['status'] == 'login') {
-    header("Location: dashboard.php");
+    header("Location: dashboard");
     exit();
 }
 
 $error = '';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (
+    !isset($_SESSION['csrf']) || !is_string($_POST['csrf'] ?? null)
+    || !hash_equals($_SESSION['csrf'], $_POST['csrf'])
+)) {
+    http_response_code(400);
+    $error = 'Sesi formulir kedaluwarsa. Silakan coba kembali.';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username']);
     $password = $_POST['password'];
 
@@ -53,13 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $_SESSION['role'] = $user['user_role'];
                 $_SESSION['status'] = "login";
 
-                header("Location: dashboard.php");
+                header("Location: dashboard");
                 exit();
             } else {
-                $error = "Password yang Anda masukkan salah.";
+                $error = "Nama pengguna atau kata sandi salah.";
             }
         } else {
-            $error = "Username tidak ditemukan.";
+            $error = "Nama pengguna atau kata sandi salah.";
         }
     } else {
         $error = "Harap isi username dan password.";
@@ -87,7 +93,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
             <?php endif; ?>
 
-            <form action="login.php" method="POST">
+            <form action="login" method="POST">
+                <?= csrf_field() ?>
                 <div class="form-group">
                     <label for="username">Nama pengguna</label>
                     <input type="text" id="username" name="username" class="form-control" required autocomplete="username">
@@ -103,11 +110,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             <div class="text-center mt-4">
                 <span style="color: var(--text-light); font-size: 0.9rem;">Belum punya akun? </span>
-                <a href="register.php" style="color: var(--accent-color); text-decoration: none; font-size: 0.9rem; font-weight: bold;">Daftar di sini</a>
+                <a href="register" style="color: var(--accent-color); text-decoration: none; font-size: 0.9rem; font-weight: bold;">Daftar di sini</a>
             </div>
 
             <div class="text-center mt-4">
-                <a href="index.php" style="color: var(--text-light); text-decoration: none; font-size: 0.9rem;">Kembali ke beranda</a>
+                <a href="./" style="color: var(--text-light); text-decoration: none; font-size: 0.9rem;">Kembali ke beranda</a>
             </div>
         </div>
     </div>

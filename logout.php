@@ -1,7 +1,7 @@
 <?php
-session_start();
+require_once __DIR__ . '/app/session.php';
 session_unset();
 session_destroy();
-header("Location: index.php");
+header("Location: ./");
 exit();
 ?>
